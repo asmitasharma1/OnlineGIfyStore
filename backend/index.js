@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(cors());
 
 //Database Connection with MongoDB
-mongoose.connect("mongodb+srv://asmitaasharmaaa:Igloo143$%40@cluster0.sdg2p1y.mongodb.net/giftshop")
+mongoose.connect("mongodb+srv://@cluster0.sdg2p1y.mongodb.net/giftshop")
 
 //API creation
 
