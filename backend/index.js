@@ -32,6 +32,9 @@ mongoose.connect(uri, {
         console.error('Error connecting to MongoDB:', error);
     });
 
+//Database Connection with MongoDB
+mongoose.connect("mongodb+srv://@cluster0.sdg2p1y.mongodb.net/giftshop")
+
 //API creation
 
 app.get("/", (req, res) => {
@@ -503,4 +506,4 @@ app.post("/checkout/:userId", async (req, res) => {
 
 
 
-    
+
