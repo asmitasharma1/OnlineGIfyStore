@@ -1,0 +1,31 @@
+/* Dashboard.css */
+.dashboard {
+    padding: 20px;
+  }
+  
+  .dashboard-section {
+    margin-bottom: 20px;
+  }
+  
+  .dashboard-section h3 {
+    margin-bottom: 10px;
+  }
+  
+  .dashboard-links {
+    margin-top: 20px;
+  }
+  
+  .dashboard-links a {
+    display: block;
+    margin-bottom: 10px;
+    text-decoration: none;
+    color: #333;
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  .dashboard-links a:hover {
+    background-color: #f0f0f0;
+  }
+  
