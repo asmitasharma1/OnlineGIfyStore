@@ -32,6 +32,11 @@ const AddProduct = () => {
         let formData = new FormData();
         formData.append('product', image);
 
+        if (!product.old_price) {
+            delete product.old_price;
+        }
+
+
         await fetch('http://localhost:4000/upload', {
             method: 'POST',
             headers: {

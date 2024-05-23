@@ -7,6 +7,7 @@ const multer = require("multer");
 const path = require("path");
 const cors = require("cors");
 const { request } = require("http");
+const { v4: uuidv4 } = require("uuid");
 
 const stripe = require("stripe")("sk_test_51P4diFBkFF9T1sc9hCAtp9JEMvnmxrxbnQew9Sd82Y7BC1nec5FRwCCRTJvrERGBfIwk0OvsStxHxqdvfBDn4nJW00M7vPYDMA");
 // require("dotenv").config()
@@ -33,7 +34,7 @@ mongoose.connect(uri, {
     });
 
 //Database Connection with MongoDB
-mongoose.connect("mongodb+srv://@cluster0.sdg2p1y.mongodb.net/giftshop")
+// mongoose.connect("mongodb+srv://@cluster0.sdg2p1y.mongodb.net/giftshop")
 
 //API creation
 
@@ -87,7 +88,7 @@ const Product = mongoose.model("Product", {
     },
     old_price: {
         type: Number,
-        required: true,
+        // required: true,
     },
     date: {
         type: Date,
@@ -205,19 +206,21 @@ const localStorage = new LocalStorage('./scratch');
 
 app.post('/login', async (req, res) => {
     let user = await Users.findOne({ email: req.body.email });
+    console.log(user)
     if (user) {
         const passCompare = req.body.password === user.password;
         if (passCompare) {
             const data = {
                 user: {
-                    id: user.id
+                    id: user._id
                 }
             }
             const token = jwt.sign(data, 'secret_egift');
 
-            localStorage.setItem('userId', user.id);
+            localStorage.setItem('userId', user._id);
 
-            res.json({ success: true, token });
+            res.json({ success: true, token, userId: user._id });
+            console.log(user._id);
         }
         else {
             res.json({ success: false, errors: "Wrong Password" });
@@ -454,49 +457,91 @@ app.post('/subscribe', async (req, res) => {
 
 app.post("/checkout/:userId", async (req, res) => {
     try {
-      // const { userId: loggedInUserId } = req.body;
-      const { userId } = req.params;
-  
-      const { items, totalAmount } = req.body;
-  
-      // Retrieve cart items from the request body
-      const cartItems = req.body.items;
-  
-      // Create an order object with user ID, book IDs, and cart items
-      const order = new Order({
-        user: userId,
-        gifts: items.map((item) => item.id), // Use the correct property name
-        cartItems: items,
-        totalAmount: totalAmount,
-      });
-  
-      // Save the order to the database
-      await order.save();
-      
+        // const { userId: loggedInUserId } = req.body;
+        // const { userId } = req.params;
 
-// //Checkout
-// app.post("/checkout", async (req, res) => {
-//     try {
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ["card"],
-            mode: "payment",
-            line_items: CartItems.map(item => {
-                return {
-                    price_data: {
-                        currency: "usd",
-                        product_data: {
-                            name: item.name
-                        },
-                        unit_amount: item.price * 100,
-                    },
-                    quantity: item.quantity
+        const { userId, items, totalAmount, token } = req.body;
+
+        // Retrieve cart items from the request body
+        const cartItems = req.body.items;
+        const idempotencyKey = uuidv4();
+        try {
+            const customer = await stripe.customers.create({
+                email: token.email,
+                source: token.id
+            });
+            const charge = await stripe.charges.create({
+                amount: totalAmount,
+                currency: "usd",
+                customer: customer.id,
+                receipt_email: token.email,
+                shipping: {
+                    name: token.card.name,
+                    address: {
+                        country: token.card.address_country
+                    }
                 }
-            }),
-            success_url: "http://localhost:3000/success",
-            cancel_url: "http://localhost:3000/cancel"
-        })
-        res.json({ url: session.url })
+            }, { idempotencyKey });
+            res.status(200).json(charge)
+            console.log("Payment successful");
+            await Users.findByIdAndUpdate(userId, { cartData: {} });
+
+            // Create an order object with user ID, book IDs, and cart items
+            // const order = new CustomerOrder({
+            //     userId: userId,
+            //     products: items.map((item) => ({
+            //         productId: item.productId,
+            //         productName: item.productName,
+            //         quantity: item.quantity,
+            //     })),
+            //     totalAmount: totalAmount,
+            // });
+
+            // // Save the order to the database
+            // await order.save();
+            // console.log(order)
+
+        } catch (error) {
+            res.status(500).json({ error: "Payment failed", details: error.message })
+        }
+
+
+        //  Create an order object with user ID, book IDs, and cart items
+        // const order = new Order({
+        //     user: userId,
+        //     gifts: items.map((item) => item.id), // Use the correct property name
+        //     cartItems: items,
+        //     totalAmount: totalAmount,
+        // });
+
+        //  Save the order to the database
+        // await order.save();
+
+
+        // //Checkout
+        // app.post("/checkout", async (req, res) => {
+        //     try {
+        // const session = await stripe.checkout.sessions.create({
+        //     payment_method_types: ["card"],
+        //     mode: "payment",
+        //     line_items: CartItems.map(item => {
+        //         return {
+        //             price_data: {
+        //                 currency: "usd",
+        //                 product_data: {
+        //                     name: item.name
+        //                 },
+        //                 unit_amount: item.new_price * 100,
+        //             },
+        //             quantity: item.quantity
+        //         }
+        //     }),
+        //     success_url: "http://localhost:3000/success",
+        //     cancel_url: "http://localhost:3000/cancel"
+        // })
+        // res.json({ url: session.url })
     } catch (error) {
+        console.log(error);
         res.status(500).json({ error: error.message })
     }
 });
